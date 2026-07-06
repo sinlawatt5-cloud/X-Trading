@@ -559,7 +559,99 @@ git clone https://github.com/sinlawatt5-cloud/X-Trading.git
 | +60min | Wave 3A (APIs) | ✅ |
 | +65min | Wave 3B (Components) | ✅ |
 | +70min | Commit + push Wave 1-3 | ✅ |
-| +75min | สร้าง session-history.md | 🔄 |
+| +75min | สร้าง session-history.md | ✅ |
+| +80min | ขอคำสั่งทำงานต่อบ้าน | ✅ |
+| +85min | Push session-history.md ใหม่ | 🔄 |
+
+---
+
+## 🏠 คำสั่งทำงานต่อบ้าน (วันนี้)
+
+### Step 1: Clone + Setup
+
+```bash
+# Clone project
+git clone https://github.com/sinlawatt5-cloud/X-Trading.git
+cd X-Trading/gold-trading-signals
+
+# ติดตั้ง dependencies
+npm install
+npx prisma generate
+
+# รัน dev server
+npm run dev
+```
+
+เปิด browser ไปที่ **http://localhost:3000**
+
+### Step 2: ทำงานต่อ (Wave 4 + Wave 5)
+
+ทำตามที่ **`docs/superpowers/specs/session-history.md`** บอก:
+- Wave 4: Dashboard, Signals List, Placeholders
+- Wave 5: Code Review
+
+### Step 3: Push ขึ้น GitHub
+
+```bash
+# ไปที่ root ของโปรเจค
+cd X-Trading
+
+# Add + Commit + Push
+git add -A
+git commit -m "feat: Phase 1 Wave 4-5 complete"
+git push -u origin main
+```
+
+---
+
+## 🏢 คำสั่งกลับมาพรุ่งนี้ (ที่นี่)
+
+### Step 1: Pull ล่าสุดจาก GitHub
+
+```bash
+cd "C:\Users\amslo\OneDrive\DESKTOP\Sinlawat OS"
+git pull origin main
+```
+
+### Step 2: รัน Dev Server
+
+```bash
+cd gold-trading-signals
+npm run dev
+```
+
+### Step 3: บอกกูว่า "ลุยต่อ"
+
+กูจะ:
+1. อ่าน session-history.md เพื่อเข้าใจบริบท
+2. ดู git log ว่ามึงทำอะไรไปบ้าง
+3. ตรวจสอบว่างานเสร็จครบมั้ย
+4. ลุย Phase 2 ต่อ (ถ้า Phase 1 เสร็จแล้ว)
+
+---
+
+## 📋 Quick Reference
+
+```bash
+# ที่บ้าน
+git clone https://github.com/sinlawatt5-cloud/X-Trading.git
+cd X-Trading/gold-trading-signals
+npm install
+npx prisma generate
+npm run dev
+
+# Push
+cd ..
+git add -A
+git commit -m "feat: ..."
+git push
+
+# พรุ่งนี้ (ที่นี่)
+cd "C:\Users\amslo\OneDrive\DESKTOP\Sinlawat OS"
+git pull origin main
+cd gold-trading-signals
+npm run dev
+```
 
 ---
 
