@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Signal {
+  id          String   @id @default(cuid())
+  type        String   // BUY or SELL
+  timeframe   String   // 15M, 1H, 4H, 1D, etc.
+  entry       Float
+  takeProfit  Float
+  stopLoss    Float
+  confidence  Float    // 0-100
+  confluence  String   // JSON string of confluence factors
+  reasoning   String   // LLM analysis reasoning
+  analysis    String   // Full JSON analysis
+  status      String   @default("ACTIVE") // ACTIVE, CLOSED, CANCELLED
+  createdAt   DateTime @default(now())
+  closedAt    DateTime?
+  journalEntry JournalEntry?
+}
+
+model JournalEntry {
+  id          String   @id @default(cuid())
+  signalId    String?  @unique
+  signal      Signal?  @relation(fields: [signalId], references: [id])
+  date        DateTime
+  symbol      String   // XAUUSD
+  direction   String   // BUY or SELL
+  entry       Float
+  exit        Float
+  stopLoss    Float
+  takeProfit  Float
+  pips        Float
+  pnl         Float
+  notes       String?
+  screenshot  String?  // URL or base64
+  createdAt   DateTime @default(now())
+}
+
+model Settings {
+  id                String   @id @default("default")
+  llmProvider       String   @default("anthropic")
+  llmApiKey         String?
+  marketDataProvider String   @default("twelvedata")
+  marketDataApiKey  String?
+  language          String   @default("en")
+  theme             String   @default("light")
+  cronEnabled       Boolean  @default(false)
+  cronInterval      Int      @default(15) // minutes
+  minConfidence     Float    @default(70) // minimum confidence threshold
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
