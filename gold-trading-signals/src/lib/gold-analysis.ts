@@ -1,4 +1,13 @@
 import { prisma } from '@/lib/prisma';
+import {
+  buildExpertAnalysis,
+  detectMTA,
+  detectSMC,
+  detectWyckoff,
+  type Candle as AnalysisCandle,
+  type ExpertAnalysis,
+} from '@/lib/analysis';
+import { getMarketNews, type NewsSnapshot } from '@/lib/market-news';
 
 export interface Candle {
   time: string;
@@ -48,10 +57,36 @@ type LlmSignalPayload = {
   mta?: unknown;
 };
 
+type ExpertConfluence = {
+  score: number;
+  factors: string[];
+};
+
+type ExpertSignalPayload = {
+  type: 'BUY' | 'SELL' | 'NEUTRAL';
+  entry: number;
+  takeProfit: number;
+  stopLoss: number;
+  confidence: number;
+  reasoning: string;
+  confluence: ExpertConfluence;
+  analysis: {
+    smc: ExpertAnalysis['smc'];
+    wyckoff: ExpertAnalysis['wyckoff'];
+    mta: ExpertAnalysis['mta'];
+    indicatorScore: number;
+    newsScore: number;
+    confluence: number;
+    source?: string;
+    raw?: unknown;
+  };
+};
+
 export type AnalysisRunResult = {
   signal: Awaited<ReturnType<typeof prisma.signal.create>>;
   source: string;
   indicators: IndicatorSnapshot;
+  news: NewsSnapshot;
   duration: number;
   pricesCount: number;
 };
@@ -109,6 +144,178 @@ function parseAlphaVantage(series: Record<string, Record<string, string>>): Cand
       close: parseFloat(values['4. close']),
       volume: parseInt(values['5. volume'] || '0', 10),
     }));
+}
+
+function toAnalysisCandles(prices: Candle[]): AnalysisCandle[] {
+  return prices.map((price) => ({
+    time: new Date(price.time).getTime() / 1000,
+    open: price.open,
+    high: price.high,
+    low: price.low,
+    close: price.close,
+    volume: price.volume,
+  }));
+}
+
+function deriveIndicatorScore(indicators: IndicatorSnapshot) {
+  let score = 50;
+
+  if (indicators.rsi < 35) score += 10;
+  if (indicators.rsi > 65) score -= 10;
+  if (indicators.macd.histogram > 0) score += 10;
+  if (indicators.macd.histogram < 0) score -= 10;
+  if (indicators.sma20 > indicators.sma50) score += 8;
+  if (indicators.sma50 > indicators.sma200) score += 7;
+  if (indicators.lastPrice > indicators.bb.middle) score += 5;
+  if (indicators.lastPrice < indicators.bb.middle) score -= 5;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+function buildExpertPrompt(
+  prices: Candle[],
+  indicators: IndicatorSnapshot,
+  expert: ExpertAnalysis
+): string {
+  const lastCandle = prices[prices.length - 1];
+  const prevCandle = prices[prices.length - 2] ?? lastCandle;
+
+  return `You are a professional XAUUSD strategist. Use SMC, Wyckoff, multi-timeframe analysis, and indicators to return ONLY valid JSON.
+
+## Market Data
+Current Price: $${lastCandle.close.toFixed(2)}
+Previous Close: $${prevCandle.close.toFixed(2)}
+High: $${lastCandle.high.toFixed(2)}
+Low: $${lastCandle.low.toFixed(2)}
+
+## Indicator Snapshot
+RSI(14): ${indicators.rsi.toFixed(2)}
+MACD Histogram: ${indicators.macd.histogram.toFixed(2)}
+SMA20: $${indicators.sma20.toFixed(2)}
+SMA50: $${indicators.sma50.toFixed(2)}
+SMA200: $${indicators.sma200.toFixed(2)}
+
+## Expert Analysis
+SMC Score: ${expert.smc.score.toFixed(0)}
+Wyckoff Score: ${expert.wyckoff.score.toFixed(0)}
+MTA Score: ${expert.mta.score.toFixed(0)}
+Indicator Score: ${expert.indicatorScore.toFixed(0)}
+News Score: ${expert.newsScore.toFixed(0)}
+Confluence: ${expert.confluence.toFixed(0)}
+Dominant Signal: ${expert.signal}
+
+## SMC Detail
+Trend: ${expert.smc.structure.trend}
+Broken BOS: ${expert.smc.structure.broken}
+Order Blocks: ${expert.smc.orderBlocks.length}
+FVG: ${expert.smc.fvgs.length}
+
+## Wyckoff Detail
+Phase: ${expert.wyckoff.phase}
+Spring: ${expert.wyckoff.spring}
+Upthrust: ${expert.wyckoff.upthrust}
+Volume Confirmation: ${expert.wyckoff.volumeConfirmation}
+
+## Multi-Timeframe Detail
+D1: ${expert.mta.d1.alignment}
+H4: ${expert.mta.h4.alignment}
+H1: ${expert.mta.h1.alignment}
+M15: ${expert.mta.m15.alignment}
+
+Rules:
+- If confluence is below 75, return NEUTRAL.
+- If you choose BUY or SELL, keep entry near current price and set sensible TP/SL.
+- Reasoning should be concise and in Thai.
+
+Return JSON:
+{
+  "type": "BUY" | "SELL" | "NEUTRAL",
+  "entry": number,
+  "takeProfit": number,
+  "stopLoss": number,
+  "confidence": number,
+  "reasoning": string,
+  "confluence": {
+    "score": number,
+    "factors": string[]
+  },
+  "analysis": {
+    "smc": object,
+    "wyckoff": object,
+    "mta": object,
+    "indicatorScore": number,
+    "newsScore": number
+  }
+}`;
+}
+
+function buildExpertFallbackSignal(expert: ExpertAnalysis): ExpertSignalPayload {
+  return {
+    type: expert.signal,
+    entry: expert.entry,
+    takeProfit: expert.takeProfit,
+    stopLoss: expert.stopLoss,
+    confidence: Math.round(expert.confidence),
+    reasoning: expert.reasoning,
+    confluence: {
+      score: Math.round(expert.confluence),
+      factors: [
+        `SMC ${expert.smc.score.toFixed(0)}`,
+        `Wyckoff ${expert.wyckoff.score.toFixed(0)}`,
+        `MTA ${expert.mta.score.toFixed(0)}`,
+        `Indicators ${expert.indicatorScore.toFixed(0)}`,
+        `News ${expert.newsScore.toFixed(0)}`,
+      ],
+    },
+    analysis: {
+      smc: expert.smc,
+      wyckoff: expert.wyckoff,
+      mta: expert.mta,
+      indicatorScore: expert.indicatorScore,
+      newsScore: expert.newsScore,
+      confluence: expert.confluence,
+    },
+  };
+}
+
+function normalizeExpertPayload(payload: LlmSignalPayload, expert: ExpertAnalysis, source: string): ExpertSignalPayload {
+  const fallback = buildExpertFallbackSignal(expert);
+  const confluenceScore =
+    typeof payload.confluence === 'object' &&
+    payload.confluence !== null &&
+    'score' in payload.confluence &&
+    typeof (payload.confluence as { score?: unknown }).score === 'number'
+      ? (payload.confluence as { score: number }).score
+      : fallback.confluence.score;
+
+  return {
+    type: expert.confluence >= 75 && (payload.type === 'BUY' || payload.type === 'SELL' || payload.type === 'NEUTRAL')
+      ? payload.type
+      : 'NEUTRAL',
+    entry: typeof payload.entry === 'number' ? payload.entry : fallback.entry,
+    takeProfit: typeof payload.takeProfit === 'number' ? payload.takeProfit : fallback.takeProfit,
+    stopLoss: typeof payload.stopLoss === 'number' ? payload.stopLoss : fallback.stopLoss,
+    confidence: typeof payload.confidence === 'number' ? payload.confidence : fallback.confidence,
+    reasoning: typeof payload.reasoning === 'string' && payload.reasoning.trim() ? payload.reasoning : fallback.reasoning,
+    confluence: {
+      score: Math.round(confluenceScore),
+      factors: fallback.confluence.factors,
+    },
+    analysis: {
+      smc: expert.smc,
+      wyckoff: expert.wyckoff,
+      mta: expert.mta,
+      indicatorScore: expert.indicatorScore,
+      newsScore: expert.newsScore,
+      confluence: expert.confluence,
+      source,
+      raw: payload.analysis ?? {
+        smc: payload.smc,
+        wyckoff: payload.wyckoff,
+        mta: payload.mta,
+      },
+    },
+  };
 }
 
 export async function fetchPriceData(settings: AnalysisSettings): Promise<{ data: Candle[]; source: string }> {
@@ -391,51 +598,6 @@ export async function callLLM(settings: AnalysisSettings, prompt: string): Promi
   }
 }
 
-function generateMockSignal(indicators: IndicatorSnapshot, timeframe = 'H1'): LlmSignalPayload {
-  const type = indicators.rsi < 45 ? 'BUY' : indicators.rsi > 55 ? 'SELL' : 'NEUTRAL';
-  const entry = parseFloat(indicators.lastPrice.toFixed(2));
-  const takeProfit =
-    type === 'BUY'
-      ? parseFloat((entry + 18 + Math.abs(indicators.macd.histogram) * 8).toFixed(2))
-      : type === 'SELL'
-        ? parseFloat((entry - 18 - Math.abs(indicators.macd.histogram) * 8).toFixed(2))
-        : parseFloat((entry + 5).toFixed(2));
-  const stopLoss =
-    type === 'BUY'
-      ? parseFloat((entry - 12 - Math.abs(indicators.macd.histogram) * 6).toFixed(2))
-      : type === 'SELL'
-        ? parseFloat((entry + 12 + Math.abs(indicators.macd.histogram) * 6).toFixed(2))
-        : parseFloat((entry - 5).toFixed(2));
-  const confidence = Math.max(50, Math.min(95, 60 + Math.abs(indicators.macd.histogram) * 25));
-
-  return {
-    type,
-    entry,
-    takeProfit,
-    stopLoss,
-    confidence: parseFloat(confidence.toFixed(1)),
-    reasoning:
-      type === 'BUY'
-        ? `Bullish bias detected on ${timeframe} with RSI below midline and improving momentum.`
-        : type === 'SELL'
-          ? `Bearish bias detected on ${timeframe} with RSI above midline and weakening momentum.`
-          : `Neutral conditions on ${timeframe}; indicators are mixed and price is balanced.`,
-    confluence: [
-      { factor: 'RSI Momentum', weight: 0.3 },
-      { factor: 'MACD Histogram', weight: 0.25 },
-      { factor: 'MA Structure', weight: 0.2 },
-      { factor: 'Bollinger Position', weight: 0.15 },
-      { factor: 'Price Action', weight: 0.1 },
-    ],
-    analysis: {
-      indicators,
-      smc: {},
-      wyckoff: {},
-      mta: {},
-    },
-  };
-}
-
 function parseSignalPayload(raw: string, indicators: IndicatorSnapshot, timeframe: string): LlmSignalPayload {
   try {
     const parsed = JSON.parse(raw) as LlmSignalPayload;
@@ -449,7 +611,14 @@ function parseSignalPayload(raw: string, indicators: IndicatorSnapshot, timefram
       reasoning: typeof parsed.reasoning === 'string' && parsed.reasoning ? parsed.reasoning : `AI analysis for ${timeframe}`,
     };
   } catch {
-    return generateMockSignal(indicators, timeframe);
+    return {
+      type: 'NEUTRAL',
+      entry: indicators.lastPrice,
+      takeProfit: indicators.lastPrice,
+      stopLoss: indicators.lastPrice,
+      confidence: 70,
+      reasoning: `AI analysis for ${timeframe}`,
+    };
   }
 }
 
@@ -466,31 +635,44 @@ export async function runGoldAnalysis(
   }
 
   const indicators = calculateIndicators(prices);
-  const prompt = buildPrompt(prices, indicators);
+  const news = await getMarketNews(settings);
+  const analysisCandles = toAnalysisCandles(prices);
+  const smc = detectSMC(analysisCandles);
+  const wyckoff = detectWyckoff(analysisCandles);
+  const mta = detectMTA(analysisCandles);
+  const indicatorScore = deriveIndicatorScore(indicators);
+  const expert = buildExpertAnalysis({
+    smc,
+    wyckoff,
+    mta,
+    indicatorScore,
+    newsScore: news.score,
+    candles: analysisCandles,
+  });
+  const prompt = buildExpertPrompt(prices, indicators, expert);
   const llmResponse = await callLLM(settings, prompt);
-  const signalPayload = llmResponse
-    ? parseSignalPayload(llmResponse, indicators, timeframe)
-    : generateMockSignal(indicators, timeframe);
+  const parsedPayload = llmResponse ? parseSignalPayload(llmResponse, indicators, timeframe) : null;
+  const signalPayload = parsedPayload
+    ? normalizeExpertPayload(parsedPayload, expert, source)
+    : buildExpertFallbackSignal(expert);
 
   const signal = await prisma.signal.create({
     data: {
-      type: signalPayload.type ?? 'NEUTRAL',
+      type: signalPayload.type,
       timeframe,
-      entry: signalPayload.entry ?? indicators.lastPrice,
-      takeProfit: signalPayload.takeProfit ?? indicators.lastPrice,
-      stopLoss: signalPayload.stopLoss ?? indicators.lastPrice,
-      confidence: signalPayload.confidence ?? 70,
-      confluence: JSON.stringify(signalPayload.confluence ?? []),
-      reasoning:
-        signalPayload.reasoning ??
-        `Generated signal based on RSI ${indicators.rsi.toFixed(2)} and MACD ${indicators.macd.histogram.toFixed(2)}`,
+      entry: signalPayload.entry,
+      takeProfit: signalPayload.takeProfit,
+      stopLoss: signalPayload.stopLoss,
+      confidence: signalPayload.confidence,
+      confluence: JSON.stringify(signalPayload.confluence),
+      reasoning: signalPayload.reasoning,
       analysis: JSON.stringify({
         indicators,
         source,
-        raw: signalPayload.analysis ?? {},
-        smc: signalPayload.smc ?? {},
-        wyckoff: signalPayload.wyckoff ?? {},
-        mta: signalPayload.mta ?? {},
+        news,
+        expert,
+        raw: signalPayload.analysis.raw ?? {},
+        analysis: signalPayload.analysis,
       }),
       status: 'ACTIVE',
     },
@@ -500,21 +682,42 @@ export async function runGoldAnalysis(
     signal,
     source,
     indicators,
+    news,
     duration: Date.now() - startTime,
     pricesCount: prices.length,
   };
 }
 
-export async function getCurrentIndicators(settings: AnalysisSettings): Promise<{ indicators: IndicatorSnapshot; source: string; pricesCount: number }> {
+export async function getCurrentIndicators(
+  settings: AnalysisSettings
+): Promise<{ indicators: IndicatorSnapshot; source: string; pricesCount: number; analysis: ExpertAnalysis; news: NewsSnapshot }> {
   const { data: prices, source } = await fetchPriceData(settings);
 
   if (prices.length < 2) {
     throw new Error('No price data available');
   }
 
+  const indicators = calculateIndicators(prices);
+  const news = await getMarketNews(settings);
+  const analysisCandles = toAnalysisCandles(prices);
+  const smc = detectSMC(analysisCandles);
+  const wyckoff = detectWyckoff(analysisCandles);
+  const mta = detectMTA(analysisCandles);
+  const indicatorScore = deriveIndicatorScore(indicators);
+  const analysis = buildExpertAnalysis({
+    smc,
+    wyckoff,
+    mta,
+    indicatorScore,
+    newsScore: news.score,
+    candles: analysisCandles,
+  });
+
   return {
-    indicators: calculateIndicators(prices),
+    indicators,
     source,
     pricesCount: prices.length,
+    analysis,
+    news,
   };
 }

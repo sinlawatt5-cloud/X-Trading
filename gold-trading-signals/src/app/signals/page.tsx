@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
+import { AnalysisPanel } from '@/components/analysis-panel';
 import { SignalCard } from '@/components/signal-card';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/components/locale-provider';
@@ -128,6 +129,10 @@ export default function SignalsPage() {
             {t('signal.activePair', locale)}
           </div>
         </div>
+      </div>
+
+      <div className="mb-8">
+        <AnalysisPanel />
       </div>
 
       {indicatorSnapshot && (

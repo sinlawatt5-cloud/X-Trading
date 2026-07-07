@@ -2,6 +2,7 @@
 
 import useSWR from 'swr';
 import { Chart } from '@/components/chart';
+import { AnalysisPanel } from '@/components/analysis-panel';
 import { SignalCard } from '@/components/signal-card';
 import { SignalGenerator } from '@/components/signal-generator';
 import { t } from '@/lib/i18n';
@@ -51,6 +52,10 @@ export default function Home() {
         <p className="font-handwritten text-xl text-cream-dark/70 dark:text-cream/70">
           {t('app.description', locale)}
         </p>
+      </section>
+
+      <section className="mb-8">
+        <AnalysisPanel />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">

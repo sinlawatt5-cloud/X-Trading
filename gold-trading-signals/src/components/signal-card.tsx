@@ -10,6 +10,11 @@ interface ConfluenceFactor {
   weight: number;
 }
 
+interface ConfluencePayload {
+  score?: number;
+  factors?: Array<ConfluenceFactor | string>;
+}
+
 interface Signal {
   id: string;
   type: 'BUY' | 'SELL' | 'NEUTRAL';
@@ -108,9 +113,18 @@ export function SignalCard({ signal, className = '' }: SignalCardProps) {
     }).format(date);
   };
 
-  let confluenceFactors: ConfluenceFactor[] = [];
+  let confluenceScore: number | null = null;
+  let confluenceFactors: string[] = [];
   try {
-    confluenceFactors = JSON.parse(signal.confluence);
+    const parsed = JSON.parse(signal.confluence) as ConfluenceFactor[] | ConfluencePayload;
+    if (Array.isArray(parsed)) {
+      confluenceFactors = parsed.map((factor) => (typeof factor === 'string' ? factor : factor.factor)).filter(Boolean);
+    } else {
+      confluenceScore = typeof parsed.score === 'number' ? parsed.score : null;
+      confluenceFactors = (parsed.factors ?? [])
+        .map((factor) => (typeof factor === 'string' ? factor : factor.factor))
+        .filter(Boolean);
+    }
   } catch {
     confluenceFactors = [];
   }
@@ -120,7 +134,7 @@ export function SignalCard({ signal, className = '' }: SignalCardProps) {
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-handwritten text-sm text-muted-foreground">
-            XAUUSD · {signal.timeframe}
+            XAUUSD - {signal.timeframe}
           </span>
           <Badge className={cn('font-data text-xs', getStatusBadge(signal.status))}>
             {getStatusLabel(signal.status)}
@@ -169,6 +183,17 @@ export function SignalCard({ signal, className = '' }: SignalCardProps) {
         </div>
       </div>
 
+      {confluenceScore !== null && (
+        <div className="mb-4 flex items-center justify-between rounded-2xl bg-background/40 px-3 py-2">
+          <span className="font-handwritten text-xs text-muted-foreground">
+            {t('signal.confluence', locale)}
+          </span>
+          <span className="font-data text-sm font-semibold text-gold-dark dark:text-gold-bright">
+            {confluenceScore}%
+          </span>
+        </div>
+      )}
+
       <div className="clay-card-inset mb-4 p-3">
         <div className="mb-1 font-handwritten text-xs text-muted-foreground">
           {t('signal.analysis', locale)}
@@ -189,7 +214,7 @@ export function SignalCard({ signal, className = '' }: SignalCardProps) {
                 key={index}
                 className="clay-card-inset inline-flex items-center px-2 py-1 font-handwritten text-xs text-cream-dark dark:text-cream"
               >
-                {factor.factor}
+                {factor}
               </span>
             ))}
           </div>
