@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import useSWR from 'swr';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,8 @@ function SettingsFormView({
   initialSettings: ReturnType<typeof useSettings>['settings'];
 }) {
   const [form, setForm] = useState<SettingsForm>(() => toForm(initialSettings));
+  const [isLlmKeySet, setIsLlmKeySet] = useState(!!initialSettings.llmApiKey);
+  const [isMarketKeySet, setIsMarketKeySet] = useState(!!initialSettings.marketDataApiKey);
   const [testingLlm, setTestingLlm] = useState(false);
   const [testingMarket, setTestingMarket] = useState(false);
   const [availableLlmModels, setAvailableLlmModels] = useState<AvailableModel[]>([]);
@@ -58,6 +61,9 @@ function SettingsFormView({
   const { updateSettings, saving } = useSettings();
   const { locale, setLocale } = useLocale();
   const { setTheme } = useTheme();
+
+  const { data: yfStatus } = useSWR('/api/settings/yfinance-status', (url: string) => fetch(url).then(r => r.json()), { refreshInterval: 60000 });
+
 
   const updateField = <K extends keyof SettingsForm>(key: K, value: SettingsForm[K]) => {
     setForm((current) => {
@@ -259,13 +265,32 @@ function SettingsFormView({
 
           <div className="space-y-2">
             <Label htmlFor="llmApiKey">{t('settings.llmApiKey', locale)}</Label>
-            <Input
-              id="llmApiKey"
-              type="password"
-              value={form.llmApiKey}
-              onChange={(event) => updateField('llmApiKey', event.target.value)}
-              placeholder="sk-..."
-            />
+            {isLlmKeySet ? (
+              <div className="flex items-center gap-2">
+                <div className="clay-card-inset flex h-10 w-full items-center px-3 py-2 text-sm text-green-600 dark:text-green-400 font-handwritten">
+                  <span className="mr-2">✅</span> {locale === 'th' ? 'API Key ถูกบันทึกไว้แล้ว' : 'API Key is saved'}
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="clay-btn text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    setIsLlmKeySet(false);
+                    updateField('llmApiKey', '');
+                  }}
+                >
+                  {locale === 'th' ? 'ลบ/เปลี่ยน' : 'Clear'}
+                </Button>
+              </div>
+            ) : (
+              <Input
+                id="llmApiKey"
+                type="password"
+                value={form.llmApiKey}
+                onChange={(event) => updateField('llmApiKey', event.target.value)}
+                placeholder="sk-..."
+              />
+            )}
           </div>
 
           <div className="space-y-2">
@@ -314,7 +339,19 @@ function SettingsFormView({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="marketDataProvider">{t('settings.marketDataProvider', locale)}</Label>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="marketDataProvider">{t('settings.marketDataProvider', locale)}</Label>
+              <div className="flex items-center gap-2 text-xs font-handwritten">
+                <span className="text-cream-dark/60 dark:text-cream/60">YFinance (Fallback):</span>
+                {yfStatus?.status === 'online' ? (
+                  <span className="flex items-center text-green-600 dark:text-green-400 font-bold"><span className="mr-1 h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>Online</span>
+                ) : yfStatus?.status === 'offline' ? (
+                  <span className="flex items-center text-red-600 dark:text-red-400 font-bold"><span className="mr-1 h-2 w-2 rounded-full bg-red-500"></span>Offline</span>
+                ) : (
+                  <span className="text-cream-dark/40 dark:text-cream/40">Checking...</span>
+                )}
+              </div>
+            </div>
             <select
               id="marketDataProvider"
               value={form.marketDataProvider}
@@ -328,13 +365,32 @@ function SettingsFormView({
 
           <div className="space-y-2">
             <Label htmlFor="marketDataApiKey">{t('settings.marketDataApiKey', locale)}</Label>
-            <Input
-              id="marketDataApiKey"
-              type="password"
-              value={form.marketDataApiKey}
-              onChange={(event) => updateField('marketDataApiKey', event.target.value)}
-              placeholder="key-..."
-            />
+            {isMarketKeySet ? (
+              <div className="flex items-center gap-2">
+                <div className="clay-card-inset flex h-10 w-full items-center px-3 py-2 text-sm text-green-600 dark:text-green-400 font-handwritten">
+                  <span className="mr-2">✅</span> {locale === 'th' ? 'API Key ถูกบันทึกไว้แล้ว' : 'API Key is saved'}
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="clay-btn text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    setIsMarketKeySet(false);
+                    updateField('marketDataApiKey', '');
+                  }}
+                >
+                  {locale === 'th' ? 'ลบ/เปลี่ยน' : 'Clear'}
+                </Button>
+              </div>
+            ) : (
+              <Input
+                id="marketDataApiKey"
+                type="password"
+                value={form.marketDataApiKey}
+                onChange={(event) => updateField('marketDataApiKey', event.target.value)}
+                placeholder="key-..."
+              />
+            )}
           </div>
 
           <div className="md:col-span-2 flex justify-end">

@@ -19,14 +19,23 @@ interface PriceResponse {
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export function useGoldPrice(refreshInterval = 15 * 60 * 1000) {
+export function useGoldPrice(interval: string = '15m', customRefreshInterval?: number) {
+  const refreshInterval = customRefreshInterval ?? (
+    interval === '1m' ? 10000 : 
+    interval === '5m' ? 60000 : 
+    interval === '15m' ? 60000 * 5 : 
+    60000 * 15 
+  );
+
+  const dedupingInterval = interval === '1m' ? 5000 : 30000;
+
   const { data, error, isLoading, mutate } = useSWR<PriceResponse>(
-    '/api/prices',
+    `/api/prices?interval=${interval}`,
     fetcher,
     {
       refreshInterval,
       revalidateOnFocus: true,
-      dedupingInterval: 60000,
+      dedupingInterval,
     }
   );
 

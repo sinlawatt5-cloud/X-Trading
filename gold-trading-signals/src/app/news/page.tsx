@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/components/locale-provider';
 import { cn } from '@/lib/utils';
+import { EconomicCalendar } from '@/components/economic-calendar';
 
 type NewsItem = {
   id: string;
@@ -56,6 +57,7 @@ export default function NewsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+      {/* ─── Page header ─────────────────────────────────────────────── */}
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display mb-2 text-3xl font-bold text-cream-dark dark:text-cream">
@@ -82,69 +84,79 @@ export default function NewsPage() {
         )}
       </div>
 
-      {isLoading && (
-        <div className="clay-card rounded-2xl p-8 text-center">
-          <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="font-handwritten text-sm text-muted-foreground">
-            {locale === 'th' ? 'กำลังโหลดข่าวตลาด...' : 'Loading market news...'}
-          </p>
-        </div>
-      )}
+      {/* ─── Economic Calendar Section ─────────────────────────────── */}
+      <EconomicCalendar />
 
-      {error && (
-        <div className="clay-card rounded-2xl p-8 text-center">
-          <p className="font-handwritten text-sm text-destructive">
-            {locale === 'th' ? 'โหลดข่าวไม่สำเร็จ' : 'Failed to load market news'}
-          </p>
-        </div>
-      )}
+      {/* ─── News Feed Section ─────────────────────────────────────── */}
+      <section>
+        <h2 className="font-display text-2xl font-bold text-cream-dark dark:text-cream mb-6">
+          {locale === 'th' ? '📰 ข่าวตลาด' : '📰 Market News Feed'}
+        </h2>
 
-      {!isLoading && !error && data && (
-        <div className="grid gap-5">
-          {data.headlines.map((headline) => (
-            <article key={headline.id} className="clay-card rounded-3xl p-6">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <Badge className={cn('font-data text-xs', badgeTone[headline.sentimentLabel])}>
-                  {headline.sentimentLabel}
-                </Badge>
-                <span className="font-handwritten text-xs text-muted-foreground">
-                  {headline.source} - {formatDate(headline.publishedAt)}
-                </span>
-              </div>
+        {isLoading && (
+          <div className="clay-card rounded-2xl p-8 text-center">
+            <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="font-handwritten text-sm text-muted-foreground">
+              {locale === 'th' ? 'กำลังโหลดข่าวตลาด...' : 'Loading market news...'}
+            </p>
+          </div>
+        )}
 
-              <h2 className="font-display mb-3 text-xl font-bold text-cream-dark dark:text-cream">
-                {headline.title}
-              </h2>
+        {error && (
+          <div className="clay-card rounded-2xl p-8 text-center">
+            <p className="font-handwritten text-sm text-destructive">
+              {locale === 'th' ? 'โหลดข่าวไม่สำเร็จ' : 'Failed to load market news'}
+            </p>
+          </div>
+        )}
 
-              <p className="font-body mb-4 text-sm leading-6 text-cream-dark/80 dark:text-cream/80">
-                {headline.summary}
-              </p>
-
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="clay-card-inset rounded-2xl px-4 py-2">
+        {!isLoading && !error && data && (
+          <div className="grid gap-5">
+            {data.headlines.map((headline) => (
+              <article key={headline.id} className="clay-card rounded-3xl p-6">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <Badge className={cn('font-data text-xs', badgeTone[headline.sentimentLabel])}>
+                    {headline.sentimentLabel}
+                  </Badge>
                   <span className="font-handwritten text-xs text-muted-foreground">
-                    {locale === 'th' ? 'คะแนนข่าว' : 'Sentiment Score'}
+                    {headline.source} - {formatDate(headline.publishedAt)}
                   </span>
-                  <div className="font-data text-lg font-bold text-gold-dark dark:text-gold-bright">
-                    {headline.sentimentScore.toFixed(0)}%
-                  </div>
                 </div>
 
-                {headline.url !== '#' && (
-                  <a
-                    href={headline.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="clay-btn px-4 py-2 font-handwritten text-sm text-cream-dark dark:text-cream"
-                  >
-                    {locale === 'th' ? 'เปิดข่าวต้นทาง' : 'Open source'}
-                  </a>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
+                <h2 className="font-display mb-3 text-xl font-bold text-cream-dark dark:text-cream">
+                  {headline.title}
+                </h2>
+
+                <p className="font-body mb-4 text-sm leading-6 text-cream-dark/80 dark:text-cream/80">
+                  {headline.summary}
+                </p>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="clay-card-inset rounded-2xl px-4 py-2">
+                    <span className="font-handwritten text-xs text-muted-foreground">
+                      {locale === 'th' ? 'คะแนนข่าว' : 'Sentiment Score'}
+                    </span>
+                    <div className="font-data text-lg font-bold text-gold-dark dark:text-gold-bright">
+                      {headline.sentimentScore.toFixed(0)}%
+                    </div>
+                  </div>
+
+                  {headline.url !== '#' && (
+                    <a
+                      href={headline.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="clay-btn px-4 py-2 font-handwritten text-sm text-cream-dark dark:text-cream"
+                    >
+                      {locale === 'th' ? 'เปิดข่าวต้นทาง' : 'Open source'}
+                    </a>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

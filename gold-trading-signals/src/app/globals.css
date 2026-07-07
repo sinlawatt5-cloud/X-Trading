@@ -94,10 +94,10 @@
   --sidebar-border: #E8DFD0;
   --sidebar-ring: #D4A843;
 
-  --clay-shadow: 0 4px 14px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --clay-shadow: 0 4px 14px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04), inset -4px -4px 10px rgba(0, 0, 0, 0.02), inset 4px 4px 10px rgba(255, 255, 255, 0.9);
   --clay-glow: 0 0 20px rgba(212, 168, 67, 0.12);
-  --clay-shadow-btn: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --clay-shadow-btn-active: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  --clay-shadow-btn: 0 4px 12px rgba(0, 0, 0, 0.08), inset -2px -2px 5px rgba(0, 0, 0, 0.03), inset 2px 2px 5px rgba(255, 255, 255, 0.9);
+  --clay-shadow-btn-active: inset 2px 2px 5px rgba(0, 0, 0, 0.1), inset -2px -2px 5px rgba(255, 255, 255, 0.7);
 }
 
 /* Dark mode */
@@ -134,10 +134,10 @@
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #F0C75E;
 
-  --clay-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), 0 0 20px rgba(240, 199, 94, 0.06);
+  --clay-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), 0 0 20px rgba(240, 199, 94, 0.06), inset -4px -4px 10px rgba(0, 0, 0, 0.3), inset 4px 4px 10px rgba(255, 255, 255, 0.04);
   --clay-glow: 0 0 25px rgba(240, 199, 94, 0.1);
-  --clay-shadow-btn: 0 4px 12px rgba(0, 0, 0, 0.25);
-  --clay-shadow-btn-active: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  --clay-shadow-btn: 0 4px 12px rgba(0, 0, 0, 0.25), inset -2px -2px 5px rgba(0, 0, 0, 0.3), inset 2px 2px 5px rgba(255, 255, 255, 0.04);
+  --clay-shadow-btn-active: inset 2px 2px 5px rgba(0, 0, 0, 0.3), inset -2px -2px 5px rgba(255, 255, 255, 0.02);
 }
 
 @layer base {
@@ -223,11 +223,18 @@
 @layer utilities {
   .font-display {
     font-family: var(--font-display), cursive;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
   .font-handwritten {
     font-family: var(--font-handwritten), cursive;
+    font-size: 1.05em;
+    letter-spacing: 0.025em;
+    text-shadow: 0 0 0.5px currentColor; /* ทริคช่วยให้ฟอนต์ลายมือดูหนาและชัดขึ้น */
   }
   .font-data {
     font-family: var(--font-data), monospace;
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 }

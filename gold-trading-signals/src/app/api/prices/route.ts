@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic';
 import { prisma } from '@/lib/prisma'
 
 interface Candle {
@@ -38,8 +39,61 @@ function generateMockData(count: number = 100): Candle[] {
   return candles
 }
 
-export async function GET() {
+async function fetchYahooFinanceFallback(intervalParam: string = '15m'): Promise<Candle[]> {
   try {
+    const mapYFInterval = (i: string) => {
+      switch(i) {
+        case '1m': return { i: '1m', r: '7d' };
+        case '5m': return { i: '5m', r: '60d' };
+        case '15m': return { i: '15m', r: '60d' };
+        case '1h': return { i: '60m', r: '730d' };
+        case '4h': return { i: '60m', r: '730d' };
+        case '1D': return { i: '1d', r: '10y' };
+        default: return { i: '15m', r: '60d' };
+      }
+    };
+    const { i, r } = mapYFInterval(intervalParam);
+    const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=${i}&range=${r}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Yahoo Finance fetch failed');
+    const data = await response.json();
+    const result = data?.chart?.result?.[0];
+    if (!result) throw new Error('Invalid Yahoo Finance format');
+    
+    const timestamps = result.timestamp || [];
+    const quote = result.indicators?.quote?.[0] || {};
+    
+    const candles: Candle[] = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      const o = quote.open[i];
+      const c = quote.close[i];
+      if (o !== null && c !== null && o !== undefined && c !== undefined) {
+        const openVal = Number(o);
+        const closeVal = Number(c);
+        const highVal = quote.high[i] !== null ? Number(quote.high[i]) : Math.max(openVal, closeVal);
+        const lowVal = quote.low[i] !== null ? Number(quote.low[i]) : Math.min(openVal, closeVal);
+
+        candles.push({
+          time: new Date(timestamps[i] * 1000).toISOString(),
+          open: parseFloat(openVal.toFixed(2)),
+          high: parseFloat(highVal.toFixed(2)),
+          low: parseFloat(lowVal.toFixed(2)),
+          close: parseFloat(closeVal.toFixed(2)),
+          volume: quote.volume[i] || 0,
+        });
+      }
+    }
+    return candles.slice(-500);
+  } catch (err) {
+    console.error('YFinance fallback failed:', err);
+    return generateMockData();
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const intervalParam = searchParams.get('interval') || '15m';
+
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },
     })
@@ -47,15 +101,27 @@ export async function GET() {
     const apiKey = settings?.marketDataApiKey
 
     if (!apiKey) {
-      const mockData = generateMockData()
-      return NextResponse.json({ data: mockData, source: 'mock' })
+      const fallbackData = await fetchYahooFinanceFallback(intervalParam)
+      return NextResponse.json({ data: fallbackData, source: 'yfinance' })
     }
 
     const provider = settings?.marketDataProvider || 'twelvedata'
 
     if (provider === 'twelvedata') {
+      const mapTwelveDataInterval = (i: string) => {
+        switch(i) {
+          case '1m': return '1min';
+          case '5m': return '5min';
+          case '15m': return '15min';
+          case '1h': return '1h';
+          case '4h': return '4h';
+          case '1D': return '1day';
+          default: return '15min';
+        }
+      };
       const response = await fetch(
-        `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=15min&outputsize=100&apikey=${apiKey}`
+        `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${mapTwelveDataInterval(intervalParam)}&outputsize=500&apikey=${apiKey}`,
+        { cache: 'no-store' }
       )
 
       if (!response.ok) {
@@ -77,8 +143,20 @@ export async function GET() {
         return NextResponse.json({ data: candles, source: 'twelvedata' })
       }
     } else if (provider === 'alphavantage') {
+      const mapAlphaVantageInterval = (i: string) => {
+        switch(i) {
+          case '1m': return '1min';
+          case '5m': return '5min';
+          case '15m': return '15min';
+          case '1h': return '60min';
+          case '4h': return '60min';
+          case '1D': return '60min';
+          default: return '15min';
+        }
+      };
       const response = await fetch(
-        `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=XAU&to_symbol=USD&interval=15min&outputsize=compact&apikey=${apiKey}`
+        `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=XAU&to_symbol=USD&interval=${mapAlphaVantageInterval(intervalParam)}&outputsize=full&apikey=${apiKey}`,
+        { cache: 'no-store' }
       )
 
       if (!response.ok) {
@@ -94,7 +172,7 @@ export async function GET() {
       if (timeSeriesKey && data[timeSeriesKey]) {
         const timeSeries = data[timeSeriesKey]
         const candles: Candle[] = Object.entries(timeSeries)
-          .slice(0, 100)
+          .slice(0, 500)
           .reverse()
           .map(([time, values]) => ({
             time,
@@ -109,11 +187,11 @@ export async function GET() {
       }
     }
 
-    const mockData = generateMockData()
-    return NextResponse.json({ data: mockData, source: 'mock' })
+    const fallbackData = await fetchYahooFinanceFallback(intervalParam)
+    return NextResponse.json({ data: fallbackData, source: 'yfinance' })
   } catch (error) {
     console.error('Failed to fetch prices:', error)
-    const mockData = generateMockData()
-    return NextResponse.json({ data: mockData, source: 'mock' })
+    const fallbackData = await fetchYahooFinanceFallback('15m')
+    return NextResponse.json({ data: fallbackData, source: 'yfinance' })
   }
 }
