@@ -32,6 +32,13 @@ const translations = {
     'signal.confluence': 'Confluence',
     'signal.created': 'Created',
     'signal.noSignals': 'No signals yet',
+    'signal.history': 'Signal History',
+    'signal.buySignal': 'Buy',
+    'signal.sellSignal': 'Sell',
+    'signal.all': 'All',
+    'signal.totalSignals': 'Total Signals',
+    'signal.winRate': 'Win Rate',
+    'signal.activePair': 'Active Pair',
 
     // Settings
     'settings.title': 'Settings',
@@ -123,6 +130,13 @@ const translations = {
     'signal.confluence': 'ปัจจัยสนับสนุน',
     'signal.created': 'สร้างเมื่อ',
     'signal.noSignals': 'ยังไม่มีสัญญาณ',
+    'signal.history': 'ประวัติสัญญาณ',
+    'signal.buySignal': 'ซื้อ',
+    'signal.sellSignal': 'ขาย',
+    'signal.all': 'ทั้งหมด',
+    'signal.totalSignals': 'สัญญาณทั้งหมด',
+    'signal.winRate': 'อัตราชนะ',
+    'signal.activePair': 'คู่ที่ใช้งาน',
 
     // Settings
     'settings.title': 'ตั้งค่า',
