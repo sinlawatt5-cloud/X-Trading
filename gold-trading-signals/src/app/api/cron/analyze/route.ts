@@ -29,6 +29,7 @@ export async function GET(request: Request) {
     const result = await runGoldAnalysis({
       llmProvider: settings.llmProvider,
       llmApiKey: settings.llmApiKey,
+      llmModel: settings.llmModel ?? null,
       marketDataProvider: settings.marketDataProvider,
       marketDataApiKey: settings.marketDataApiKey ?? null,
     });

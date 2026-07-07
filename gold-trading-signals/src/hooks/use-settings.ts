@@ -9,6 +9,7 @@ export interface Settings {
   id: string;
   llmProvider: string;
   llmApiKey: string | null;
+  llmModel: string | null;
   marketDataProvider: string;
   marketDataApiKey: string | null;
   language: Locale;
@@ -22,6 +23,7 @@ const defaultSettings: Settings = {
   id: 'default',
   llmProvider: 'anthropic',
   llmApiKey: null,
+  llmModel: null,
   marketDataProvider: 'twelvedata',
   marketDataApiKey: null,
   language: defaultLocale,

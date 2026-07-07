@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 
 const DEFAULT_SETTINGS = {
   llmProvider: 'anthropic',
+  llmModel: null,
   marketDataProvider: 'twelvedata',
   language: 'th',
   theme: 'light',
@@ -41,6 +42,12 @@ function normalizeSettings(body: Record<string, unknown>) {
       typeof body.llmApiKey === 'string'
         ? body.llmApiKey.trim() || null
         : body.llmApiKey === null
+          ? null
+          : undefined,
+    llmModel:
+      typeof body.llmModel === 'string'
+        ? body.llmModel.trim() || null
+        : body.llmModel === null
           ? null
           : undefined,
     marketDataProvider:

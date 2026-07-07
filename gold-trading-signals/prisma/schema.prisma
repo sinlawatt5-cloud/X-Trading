@@ -49,6 +49,7 @@ model Settings {
   id                String   @id @default("default")
   llmProvider       String   @default("anthropic")
   llmApiKey         String?
+  llmModel          String?
   marketDataProvider String   @default("twelvedata")
   marketDataApiKey  String?
   language          String   @default("en")

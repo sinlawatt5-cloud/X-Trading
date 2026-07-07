@@ -14,6 +14,7 @@ export async function GET() {
     const result = await getCurrentIndicators({
       llmProvider: settings?.llmProvider ?? 'anthropic',
       llmApiKey: settings?.llmApiKey ?? null,
+      llmModel: settings?.llmModel ?? null,
       marketDataProvider: settings?.marketDataProvider ?? 'twelvedata',
       marketDataApiKey: settings?.marketDataApiKey ?? null,
     });

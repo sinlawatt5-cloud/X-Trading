@@ -7,6 +7,7 @@ import {
   type Candle as AnalysisCandle,
   type ExpertAnalysis,
 } from '@/lib/analysis';
+import { getDefaultModelForProvider } from '@/lib/llm-providers';
 import { getMarketNews, type NewsSnapshot } from '@/lib/market-news';
 
 export interface Candle {
@@ -21,6 +22,7 @@ export interface Candle {
 export interface AnalysisSettings {
   llmProvider: string;
   llmApiKey: string | null;
+  llmModel?: string | null;
   marketDataProvider: string;
   marketDataApiKey: string | null;
 }
@@ -527,61 +529,88 @@ Return JSON:
 export async function callLLM(settings: AnalysisSettings, prompt: string): Promise<string | null> {
   const apiKey = settings.llmApiKey;
   const provider = settings.llmProvider;
+  const selectedModel = settings.llmModel?.trim() || getDefaultModelForProvider(provider) || undefined;
 
   const configs: Record<
     string,
     {
       url: string;
-      formatBody: (prompt: string) => unknown;
+      defaultModel: string;
+      formatBody: (prompt: string, model: string) => unknown;
       parseResponse: (response: unknown) => string | null;
+      headers: (apiKey: string) => Record<string, string>;
     }
   > = {
     openrouter: {
       url: 'https://openrouter.ai/api/v1/chat/completions',
-      formatBody: (promptText) => ({
-        model: 'google/gemini-2.0-flash-001',
+      defaultModel: 'google/gemini-2.0-flash-001',
+      formatBody: (promptText, model) => ({
+        model,
         messages: [{ role: 'user', content: promptText }],
         max_tokens: 500,
       }),
       parseResponse: (response) => (response as { choices?: Array<{ message?: { content?: string } }> })?.choices?.[0]?.message?.content ?? null,
+      headers: (key) => ({
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+      }),
     },
     openai: {
       url: 'https://api.openai.com/v1/chat/completions',
-      formatBody: (promptText) => ({
-        model: 'gpt-4o-mini',
+      defaultModel: 'gpt-4o-mini',
+      formatBody: (promptText, model) => ({
+        model,
         messages: [{ role: 'user', content: promptText }],
         max_tokens: 500,
       }),
       parseResponse: (response) => (response as { choices?: Array<{ message?: { content?: string } }> })?.choices?.[0]?.message?.content ?? null,
+      headers: (key) => ({
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+      }),
     },
     anthropic: {
       url: 'https://api.anthropic.com/v1/messages',
-      formatBody: (promptText) => ({
-        model: 'claude-3-5-haiku-20241022',
+      defaultModel: 'claude-3-5-haiku-20241022',
+      formatBody: (promptText, model) => ({
+        model,
         max_tokens: 500,
         messages: [{ role: 'user', content: promptText }],
       }),
       parseResponse: (response) => (response as { content?: Array<{ text?: string }> })?.content?.[0]?.text ?? null,
+      headers: (key) => ({
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+      }),
+    },
+    deepseek: {
+      url: 'https://api.deepseek.com/chat/completions',
+      defaultModel: 'deepseek-v4-flash',
+      formatBody: (promptText, model) => ({
+        model,
+        messages: [{ role: 'user', content: promptText }],
+        max_tokens: 500,
+        response_format: { type: 'json_object' },
+        thinking: { type: 'disabled' },
+      }),
+      parseResponse: (response) => (response as { choices?: Array<{ message?: { content?: string } }> })?.choices?.[0]?.message?.content ?? null,
+      headers: (key) => ({
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+      }),
     },
   };
 
   const config = configs[provider];
   if (!config || !apiKey) return null;
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${apiKey}`,
-  };
-
-  if (provider === 'anthropic') {
-    headers['anthropic-version'] = '2023-06-01';
-  }
+  const model = selectedModel || config.defaultModel;
 
   try {
     const response = await fetch(config.url, {
       method: 'POST',
-      headers,
-      body: JSON.stringify(config.formatBody(prompt)),
+      headers: config.headers(apiKey),
+      body: JSON.stringify(config.formatBody(prompt, model)),
       signal: AbortSignal.timeout(30_000),
     });
 

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useSettings } from '@/hooks/use-settings';
+import { getDefaultModelForProvider } from '@/lib/llm-providers';
 import { t, type Locale } from '@/lib/i18n';
 import { useLocale } from '@/components/locale-provider';
 import { useTheme } from 'next-themes';
@@ -14,6 +15,7 @@ import { useTheme } from 'next-themes';
 type SettingsForm = {
   llmProvider: string;
   llmApiKey: string;
+  llmModel: string;
   marketDataProvider: string;
   marketDataApiKey: string;
   language: Locale;
@@ -23,10 +25,16 @@ type SettingsForm = {
   minConfidence: string;
 };
 
+type AvailableModel = {
+  id: string;
+  label: string;
+};
+
 function toForm(settings: ReturnType<typeof useSettings>['settings']): SettingsForm {
   return {
     llmProvider: settings.llmProvider ?? 'anthropic',
     llmApiKey: settings.llmApiKey ?? '',
+    llmModel: settings.llmModel ?? getDefaultModelForProvider(settings.llmProvider ?? 'anthropic') ?? '',
     marketDataProvider: settings.marketDataProvider ?? 'twelvedata',
     marketDataApiKey: settings.marketDataApiKey ?? '',
     language: settings.language ?? 'th',
@@ -43,12 +51,114 @@ function SettingsFormView({
   initialSettings: ReturnType<typeof useSettings>['settings'];
 }) {
   const [form, setForm] = useState<SettingsForm>(() => toForm(initialSettings));
+  const [testingLlm, setTestingLlm] = useState(false);
+  const [testingMarket, setTestingMarket] = useState(false);
+  const [availableLlmModels, setAvailableLlmModels] = useState<AvailableModel[]>([]);
+  const [llmVerified, setLlmVerified] = useState(false);
   const { updateSettings, saving } = useSettings();
   const { locale, setLocale } = useLocale();
   const { setTheme } = useTheme();
 
   const updateField = <K extends keyof SettingsForm>(key: K, value: SettingsForm[K]) => {
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      if (key === 'llmApiKey') {
+        setAvailableLlmModels([]);
+        setLlmVerified(false);
+        return {
+          ...current,
+          llmApiKey: value as SettingsForm['llmApiKey'],
+          llmModel: '',
+        };
+      }
+
+      return { ...current, [key]: value };
+    });
+  };
+
+  const handleProviderChange = (provider: string) => {
+    setAvailableLlmModels([]);
+    setLlmVerified(false);
+    setForm((current) => ({
+      ...current,
+      llmProvider: provider,
+      llmModel: '',
+    }));
+  };
+
+  const handleTestProvider = async (kind: 'llm' | 'market') => {
+    try {
+      if (kind === 'llm') {
+        setTestingLlm(true);
+      } else {
+        setTestingMarket(true);
+      }
+
+      const payload =
+        kind === 'llm'
+          ? {
+              kind,
+              llmProvider: form.llmProvider,
+              llmApiKey: form.llmApiKey.trim(),
+              llmModel: form.llmModel.trim(),
+            }
+          : {
+              kind,
+              marketDataProvider: form.marketDataProvider,
+              marketDataApiKey: form.marketDataApiKey.trim(),
+            };
+
+      const response = await fetch('/api/settings/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = (await response.json()) as Record<string, unknown>;
+      if (!response.ok || result.ok !== true) {
+        throw new Error(typeof result.error === 'string' ? result.error : 'Test failed');
+      }
+
+      if (kind === 'llm') {
+        const models = Array.isArray(result.models)
+          ? (result.models as Array<{ id?: unknown; label?: unknown }>)
+              .filter((model) => typeof model.id === 'string' && model.id)
+              .map((model) => ({
+                id: String(model.id),
+                label: typeof model.label === 'string' ? model.label : String(model.id),
+              }))
+          : [];
+
+        setAvailableLlmModels(models);
+        setLlmVerified(models.length > 0);
+        setForm((current) => ({
+          ...current,
+          llmModel:
+            models.find((model) => model.id === current.llmModel)?.id ??
+            String(result.model ?? models[0]?.id ?? ''),
+        }));
+
+        toast.success(locale === 'th' ? 'ทดสอบ LLM ผ่าน' : 'LLM test passed', {
+          description: `${String(result.provider)} / ${String(result.model)} / ${String(result.latencyMs)}ms / ${models.length} models`,
+        });
+        return;
+      }
+
+      toast.success(locale === 'th' ? 'ทดสอบข้อมูลตลาดผ่าน' : 'Market data test passed', {
+        description: `${String(result.provider)} / ${String(result.symbol)} / ${Number(result.price).toFixed(2)}`,
+      });
+    } catch (error) {
+      if (kind === 'llm') {
+        setAvailableLlmModels([]);
+        setLlmVerified(false);
+      }
+
+      toast.error(locale === 'th' ? 'ทดสอบไม่ผ่าน' : 'Test failed', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    } finally {
+      setTestingLlm(false);
+      setTestingMarket(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -65,6 +175,7 @@ function SettingsFormView({
     const ok = await updateSettings({
       llmProvider: form.llmProvider,
       llmApiKey: form.llmApiKey.trim() || null,
+      llmModel: form.llmModel.trim() || null,
       marketDataProvider: form.marketDataProvider,
       marketDataApiKey: form.marketDataApiKey.trim() || null,
       language: form.language,
@@ -136,12 +247,13 @@ function SettingsFormView({
             <select
               id="llmProvider"
               value={form.llmProvider}
-              onChange={(event) => updateField('llmProvider', event.target.value)}
+              onChange={(event) => handleProviderChange(event.target.value)}
               className="clay-card h-10 w-full rounded-xl border-none px-3 py-2 font-body text-sm text-cream-dark dark:text-cream"
             >
               <option value="anthropic">{t('settings.llmProviderAnthropic', locale)}</option>
               <option value="openai">{t('settings.llmProviderOpenAI', locale)}</option>
               <option value="openrouter">{t('settings.llmProviderOpenRouter', locale)}</option>
+              <option value="deepseek">DeepSeek</option>
             </select>
           </div>
 
@@ -154,6 +266,51 @@ function SettingsFormView({
               onChange={(event) => updateField('llmApiKey', event.target.value)}
               placeholder="sk-..."
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="llmModel">{locale === 'th' ? 'โมเดล LLM' : 'LLM Model'}</Label>
+            <select
+              id="llmModel"
+              value={form.llmModel}
+              onChange={(event) => updateField('llmModel', event.target.value)}
+              disabled={!llmVerified || availableLlmModels.length === 0}
+              className="clay-card h-10 w-full rounded-xl border-none px-3 py-2 font-body text-sm text-cream-dark dark:text-cream disabled:opacity-60"
+            >
+              {availableLlmModels.length > 0 ? (
+                availableLlmModels.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.label}
+                  </option>
+                ))
+              ) : (
+                <option value="">
+                  {locale === 'th' ? 'กดทดสอบ LLM ก่อนเพื่อโหลดโมเดล' : 'Run LLM test first to load models'}
+                </option>
+              )}
+            </select>
+            <p className="text-xs text-cream-dark/60 dark:text-cream/60">
+              {locale === 'th'
+                ? 'เปลี่ยน provider หรือ API key เมื่อไร ต้องกดทดสอบใหม่ก่อนถึงจะเลือกโมเดลได้'
+                : 'Change provider or API key and test again before selecting a model.'}
+            </p>
+          </div>
+
+          <div className="flex items-end">
+            <Button
+              type="button"
+              onClick={() => handleTestProvider('llm')}
+              disabled={testingLlm || !form.llmApiKey.trim()}
+              className="w-full"
+            >
+              {testingLlm
+                ? locale === 'th'
+                  ? 'กำลังทดสอบ LLM...'
+                  : 'Testing LLM...'
+                : locale === 'th'
+                  ? 'ทดสอบ LLM และโหลดโมเดล'
+                  : 'Test LLM and load models'}
+            </Button>
           </div>
 
           <div className="space-y-2">
@@ -178,6 +335,24 @@ function SettingsFormView({
               onChange={(event) => updateField('marketDataApiKey', event.target.value)}
               placeholder="key-..."
             />
+          </div>
+
+          <div className="md:col-span-2 flex justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handleTestProvider('market')}
+              disabled={testingMarket || !form.marketDataApiKey.trim()}
+              className="px-6"
+            >
+              {testingMarket
+                ? locale === 'th'
+                  ? 'กำลังทดสอบข้อมูลตลาด...'
+                  : 'Testing market data...'
+                : locale === 'th'
+                  ? 'ทดสอบข้อมูลตลาด'
+                  : 'Test market data'}
+            </Button>
           </div>
         </div>
 
@@ -248,6 +423,7 @@ export default function SettingsPage() {
   const formKey = [
     settings.llmProvider,
     settings.llmApiKey ?? '',
+    settings.llmModel ?? '',
     settings.marketDataProvider,
     settings.marketDataApiKey ?? '',
     settings.language,
