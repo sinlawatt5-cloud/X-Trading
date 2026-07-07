@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { createChart, CandlestickSeries, HistogramSeries, type IChartApi, type ISeriesApi } from 'lightweight-charts';
+import type { UTCTimestamp } from 'lightweight-charts';
 import { useTheme } from 'next-themes';
 import { useGoldPrice } from '@/hooks/use-gold-price';
 
@@ -105,8 +106,17 @@ export function Chart({ className = '' }: ChartProps) {
     if (!candlestickSeriesRef.current || !volumeSeriesRef.current) return;
     if (!candles.length) return;
 
+    const toChartTime = (time: number | string): UTCTimestamp => {
+      if (typeof time === 'number') return time as UTCTimestamp;
+      if (typeof time === 'string') {
+        if (time.includes('T')) return (new Date(time).getTime() / 1000) as UTCTimestamp;
+        return (new Date(time).getTime() / 1000) as UTCTimestamp;
+      }
+      return Math.floor(Date.now() / 1000) as UTCTimestamp;
+    };
+
     const candleData = candles.map((candle) => ({
-      time: candle.time as string,
+      time: toChartTime(candle.time),
       open: candle.open,
       high: candle.high,
       low: candle.low,
@@ -114,7 +124,7 @@ export function Chart({ className = '' }: ChartProps) {
     }));
 
     const volumeData = candles.map((candle) => ({
-      time: candle.time as string,
+      time: toChartTime(candle.time),
       value: candle.volume,
       color: candle.close >= candle.open
         ? (theme === 'dark' ? 'rgba(76, 175, 80, 0.5)' : 'rgba(46, 125, 50, 0.5)')
