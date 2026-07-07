@@ -2,6 +2,8 @@
 
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { t } from '@/lib/i18n';
+import { useLocale } from '@/components/locale-provider';
 
 interface ConfluenceFactor {
   factor: string;
@@ -29,6 +31,8 @@ interface SignalCardProps {
 }
 
 export function SignalCard({ signal, className = '' }: SignalCardProps) {
+  const { locale } = useLocale();
+
   const getBorderColor = (type: string) => {
     switch (type) {
       case 'BUY':
@@ -64,20 +68,44 @@ export function SignalCard({ signal, className = '' }: SignalCardProps) {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return t('signal.active', locale);
+      case 'CLOSED':
+        return t('signal.closed', locale);
+      case 'CANCELLED':
+        return t('signal.cancelled', locale);
+      default:
+        return status;
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'BUY':
+        return t('signal.buy', locale);
+      case 'SELL':
+        return t('signal.sell', locale);
+      default:
+        return type;
+    }
+  };
+
   const calculatePips = (entry: number, target: number, type: string) => {
     const diff = Math.abs(target - entry);
-    const pips = diff * 10; // Assuming 1 pip = 0.1 for gold
+    const pips = diff * 10;
     return type === 'BUY' ? `+${pips.toFixed(1)}` : `-${pips.toFixed(1)}`;
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return new Intl.DateTimeFormat(locale === 'th' ? 'th-TH' : 'en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    });
+    }).format(date);
   };
 
   let confluenceFactors: ConfluenceFactor[] = [];
@@ -88,56 +116,35 @@ export function SignalCard({ signal, className = '' }: SignalCardProps) {
   }
 
   return (
-    <div
-      className={cn(
-        'clay-card border-l-4 p-5',
-        getBorderColor(signal.type),
-        className
-      )}
-    >
-      {/* Header */}
+    <div className={cn('clay-card border-l-4 p-5', getBorderColor(signal.type), className)}>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-handwritten text-sm text-muted-foreground">
             XAUUSD · {signal.timeframe}
           </span>
-          <Badge
-            className={cn(
-              'font-data text-xs',
-              getStatusBadge(signal.status)
-            )}
-          >
-            {signal.status}
+          <Badge className={cn('font-data text-xs', getStatusBadge(signal.status))}>
+            {getStatusLabel(signal.status)}
           </Badge>
         </div>
-        <Badge
-          className={cn(
-            'font-data text-xs',
-            getBadgeVariant(signal.type)
-          )}
-        >
-          {signal.type}
-        </Badge>
+        <Badge className={cn('font-data text-xs', getBadgeVariant(signal.type))}>{getTypeLabel(signal.type)}</Badge>
       </div>
 
-      {/* Entry Price */}
       <div className="clay-card-inset mb-4 p-4">
         <div className="font-data text-3xl font-bold text-gold-dark dark:text-gold-bright">
           ${signal.entry.toFixed(2)}
         </div>
         <div className="font-handwritten text-sm text-muted-foreground">
-          Entry Price
+          {t('signal.entryPrice', locale)}
         </div>
       </div>
 
-      {/* TP/SL */}
       <div className="mb-4 grid grid-cols-2 gap-3">
         <div className="clay-card-inset p-3">
           <div className="font-data text-sm font-semibold text-green-600 dark:text-green-400">
             ${signal.takeProfit.toFixed(2)}
           </div>
           <div className="font-handwritten text-xs text-muted-foreground">
-            Take Profit ({calculatePips(signal.entry, signal.takeProfit, signal.type)})
+            {t('signal.takeProfitLabel', locale)} ({calculatePips(signal.entry, signal.takeProfit, signal.type)})
           </div>
         </div>
         <div className="clay-card-inset p-3">
@@ -145,42 +152,36 @@ export function SignalCard({ signal, className = '' }: SignalCardProps) {
             ${signal.stopLoss.toFixed(2)}
           </div>
           <div className="font-handwritten text-xs text-muted-foreground">
-            Stop Loss ({calculatePips(signal.entry, signal.stopLoss, signal.type)})
+            {t('signal.stopLossLabel', locale)} ({calculatePips(signal.entry, signal.stopLoss, signal.type)})
           </div>
         </div>
       </div>
 
-      {/* Confidence */}
       <div className="mb-4 flex items-center justify-between">
         <div className="font-handwritten text-sm">
-          Confidence:{' '}
+          {t('signal.confidence', locale)}:{' '}
           <span className="font-data font-semibold text-gold-dark dark:text-gold-bright">
             {signal.confidence}%
           </span>
         </div>
         <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full gold-gradient"
-            style={{ width: `${signal.confidence}%` }}
-          />
+          <div className="gold-gradient h-full rounded-full" style={{ width: `${signal.confidence}%` }} />
         </div>
       </div>
 
-      {/* Reasoning */}
       <div className="clay-card-inset mb-4 p-3">
-        <div className="font-handwritten text-xs text-muted-foreground mb-1">
-          Analysis
+        <div className="mb-1 font-handwritten text-xs text-muted-foreground">
+          {t('signal.analysis', locale)}
         </div>
         <p className="font-handwritten text-sm leading-relaxed text-cream-dark dark:text-cream">
           {signal.reasoning}
         </p>
       </div>
 
-      {/* Confluence Factors */}
       {confluenceFactors.length > 0 && (
         <div className="mb-4">
-          <div className="font-handwritten text-xs text-muted-foreground mb-2">
-            Confluence Factors
+          <div className="mb-2 font-handwritten text-xs text-muted-foreground">
+            {t('signal.confluenceFactors', locale)}
           </div>
           <div className="flex flex-wrap gap-2">
             {confluenceFactors.slice(0, 3).map((factor, index) => (
@@ -195,10 +196,9 @@ export function SignalCard({ signal, className = '' }: SignalCardProps) {
         </div>
       )}
 
-      {/* Timestamp */}
       <div className="border-t border-border pt-3">
         <div className="font-handwritten text-xs text-muted-foreground">
-          Generated: {formatDate(signal.createdAt)}
+          {t('signal.generatedAt', locale)}: {formatDate(signal.createdAt)}
         </div>
       </div>
     </div>

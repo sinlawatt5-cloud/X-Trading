@@ -5,19 +5,10 @@ import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useSyncExternalStore } from 'react';
 import { cn } from '@/lib/utils';
-import { t, type Locale } from '@/lib/i18n';
+import { t } from '@/lib/i18n';
+import { useLocale } from '@/components/locale-provider';
 
-interface HeaderProps {
-  locale: Locale;
-}
-
-const navItems = [
-  'dashboard',
-  'signals',
-  'news',
-  'journal',
-  'settings',
-] as const;
+const navItems = ['dashboard', 'signals', 'news', 'journal', 'settings'] as const;
 
 function useMounted() {
   return useSyncExternalStore(
@@ -27,15 +18,14 @@ function useMounted() {
   );
 }
 
-export function Header({ locale }: HeaderProps) {
+export function Header() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const mounted = useMounted();
+  const { locale, setLocale } = useLocale();
 
   const toggleLocale = () => {
-    const next = locale === 'en' ? 'th' : 'en';
-    document.cookie = `locale=${next};path=/;max-age=31536000`;
-    window.location.reload();
+    setLocale(locale === 'en' ? 'th' : 'en');
   };
 
   return (
@@ -52,9 +42,8 @@ export function Header({ locale }: HeaderProps) {
 
         <nav className="hidden items-center gap-1 md:flex">
           {navItems.map((item) => {
-            const isActive =
-              pathname === `/${item}` ||
-              (item === 'dashboard' && pathname === '/');
+            const isActive = pathname === `/${item}` || (item === 'dashboard' && pathname === '/');
+
             return (
               <Link
                 key={item}

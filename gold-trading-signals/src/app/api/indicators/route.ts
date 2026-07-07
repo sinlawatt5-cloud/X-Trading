@@ -1,28 +1,28 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { runGoldAnalysis } from '@/lib/gold-analysis';
+import { getCurrentIndicators } from '@/lib/gold-analysis';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+export async function GET() {
   try {
     const settings = await prisma.settings.findUnique({
       where: { id: 'default' },
     });
 
-    const result = await runGoldAnalysis({
+    const result = await getCurrentIndicators({
       llmProvider: settings?.llmProvider ?? 'anthropic',
       llmApiKey: settings?.llmApiKey ?? null,
       marketDataProvider: settings?.marketDataProvider ?? 'twelvedata',
       marketDataApiKey: settings?.marketDataApiKey ?? null,
     });
 
-    return NextResponse.json(result.signal, { status: 201 });
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('Failed to generate signal:', error);
+    console.error('Failed to fetch indicators:', error);
     return NextResponse.json(
-      { error: 'Failed to generate signal' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch indicators' },
       { status: 500 }
     );
   }

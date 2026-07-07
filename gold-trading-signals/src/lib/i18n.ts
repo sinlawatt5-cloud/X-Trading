@@ -2,35 +2,46 @@ export type Locale = 'en' | 'th';
 
 export const locales: Locale[] = ['en', 'th'];
 
-export const defaultLocale: Locale = 'en';
+export const defaultLocale: Locale = 'th';
 
 const translations = {
   en: {
-    // App
     'app.name': 'Alpha Gold Signals',
     'app.description': 'AI-powered gold trading signals',
+    'app.recentSignals': 'Recent Signals',
+    'app.refresh': 'Refresh',
+    'app.loadingSignals': 'Loading signals...',
+    'app.errorLoadingSignals': 'Error loading signals',
+    'app.noSignalsGenerated': 'No signals generated yet. Use the generator above to create your first signal!',
+    'app.generateFirstSignal': 'Generate your first signal',
 
-    // Navigation
     'nav.dashboard': 'Dashboard',
     'nav.signals': 'Signals',
     'nav.news': 'News',
     'nav.journal': 'Journal',
     'nav.settings': 'Settings',
 
-    // Signal Types
     'signal.buy': 'BUY',
     'signal.sell': 'SELL',
     'signal.active': 'Active',
     'signal.closed': 'Closed',
     'signal.cancelled': 'Cancelled',
     'signal.entry': 'Entry',
+    'signal.entryPrice': 'Entry Price',
     'signal.takeProfit': 'Take Profit',
+    'signal.takeProfitLabel': 'Take Profit',
     'signal.stopLoss': 'Stop Loss',
+    'signal.stopLossLabel': 'Stop Loss',
     'signal.confidence': 'Confidence',
     'signal.timeframe': 'Timeframe',
     'signal.analysis': 'Analysis',
     'signal.confluence': 'Confluence',
     'signal.created': 'Created',
+    'signal.generatedAt': 'Generated',
+    'signal.confluenceFactors': 'Confluence Factors',
+    'signal.generateNew': 'Generate New Signal',
+    'signal.analyzing': 'Analyzing...',
+    'signal.signalCreated': 'Signal Generated!',
     'signal.noSignals': 'No signals yet',
     'signal.history': 'Signal History',
     'signal.buySignal': 'Buy',
@@ -40,7 +51,6 @@ const translations = {
     'signal.winRate': 'Win Rate',
     'signal.activePair': 'Active Pair',
 
-    // Settings
     'settings.title': 'Settings',
     'settings.language': 'Language',
     'settings.theme': 'Theme',
@@ -57,8 +67,21 @@ const translations = {
     'settings.saved': 'Saved!',
     'settings.languageDescription': 'Choose your preferred language',
     'settings.themeDescription': 'Switch between light and dark mode',
+    'settings.general': 'General',
+    'settings.providers': 'Providers',
+    'settings.analysis': 'Analysis',
+    'settings.security': 'Security',
+    'settings.cronDescription': 'Automatically generate new analysis on a schedule',
+    'settings.languageRestart': 'Changes apply instantly across the app',
+    'settings.apiProtectedNote': 'API keys stay on the server side only.',
+    'settings.llmProviderAnthropic': 'Anthropic',
+    'settings.llmProviderOpenAI': 'OpenAI',
+    'settings.llmProviderOpenRouter': 'OpenRouter',
+    'settings.marketProviderTwelveData': 'Twelve Data',
+    'settings.marketProviderAlphaVantage': 'Alpha Vantage',
+    'settings.saveSuccess': 'Settings saved',
+    'settings.saveError': 'Could not save settings',
 
-    // Chart
     'chart.price': 'Price',
     'chart.volume': 'Volume',
     'chart.open': 'Open',
@@ -66,14 +89,12 @@ const translations = {
     'chart.low': 'Low',
     'chart.close': 'Close',
 
-    // Timeframes
     'tf.15m': '15 Minutes',
     'tf.1h': '1 Hour',
     'tf.4h': '4 Hours',
     'tf.1d': '1 Day',
     'tf.1w': '1 Week',
 
-    // Journal
     'journal.title': 'Trading Journal',
     'journal.newEntry': 'New Entry',
     'journal.date': 'Date',
@@ -85,11 +106,9 @@ const translations = {
     'journal.notes': 'Notes',
     'journal.noEntries': 'No journal entries yet',
 
-    // News
     'news.title': 'Market News',
     'news.noNews': 'No news available',
 
-    // Common
     'common.loading': 'Loading...',
     'common.error': 'Error',
     'common.retry': 'Retry',
@@ -104,31 +123,42 @@ const translations = {
     'common.pips': 'pips',
   },
   th: {
-    // App
     'app.name': 'Alpha Gold Signals',
     'app.description': 'สัญญาณเทรดทองคำ AI',
+    'app.recentSignals': 'สัญญาณล่าสุด',
+    'app.refresh': 'รีเฟรช',
+    'app.loadingSignals': 'กำลังโหลดสัญญาณ...',
+    'app.errorLoadingSignals': 'เกิดข้อผิดพลาดในการโหลดสัญญาณ',
+    'app.noSignalsGenerated': 'ยังไม่มีสัญญาณใด ๆ ลองใช้ตัวสร้างด้านบนเพื่อสร้างสัญญาณแรก',
+    'app.generateFirstSignal': 'สร้างสัญญาณแรก',
 
-    // Navigation
     'nav.dashboard': 'แดชบอร์ด',
     'nav.signals': 'สัญญาณ',
     'nav.news': 'ข่าว',
     'nav.journal': 'บันทึกเทรด',
     'nav.settings': 'ตั้งค่า',
 
-    // Signal Types
     'signal.buy': 'ซื้อ',
     'signal.sell': 'ขาย',
     'signal.active': 'ใช้งาน',
     'signal.closed': 'ปิดแล้ว',
     'signal.cancelled': 'ยกเลิก',
     'signal.entry': 'ราคาเข้า',
+    'signal.entryPrice': 'ราคาเข้า',
     'signal.takeProfit': 'กำไรเป้าหมาย',
+    'signal.takeProfitLabel': 'กำไรเป้าหมาย',
     'signal.stopLoss': 'ขาดทุนจำกัด',
+    'signal.stopLossLabel': 'ขาดทุนจำกัด',
     'signal.confidence': 'ความมั่นใจ',
     'signal.timeframe': 'กรอบเวลา',
     'signal.analysis': 'การวิเคราะห์',
     'signal.confluence': 'ปัจจัยสนับสนุน',
     'signal.created': 'สร้างเมื่อ',
+    'signal.generatedAt': 'สร้างเมื่อ',
+    'signal.confluenceFactors': 'ปัจจัยสนับสนุน',
+    'signal.generateNew': 'สร้างสัญญาณใหม่',
+    'signal.analyzing': 'กำลังวิเคราะห์...',
+    'signal.signalCreated': 'สร้างสัญญาณแล้ว!',
     'signal.noSignals': 'ยังไม่มีสัญญาณ',
     'signal.history': 'ประวัติสัญญาณ',
     'signal.buySignal': 'ซื้อ',
@@ -138,7 +168,6 @@ const translations = {
     'signal.winRate': 'อัตราชนะ',
     'signal.activePair': 'คู่ที่ใช้งาน',
 
-    // Settings
     'settings.title': 'ตั้งค่า',
     'settings.language': 'ภาษา',
     'settings.theme': 'ธีม',
@@ -155,23 +184,34 @@ const translations = {
     'settings.saved': 'บันทึกแล้ว!',
     'settings.languageDescription': 'เลือกภาษาที่ต้องการ',
     'settings.themeDescription': 'สลับระหว่างโหมดสว่างและมืด',
+    'settings.general': 'ทั่วไป',
+    'settings.providers': 'ผู้ให้บริการ',
+    'settings.analysis': 'การวิเคราะห์',
+    'settings.security': 'ความปลอดภัย',
+    'settings.cronDescription': 'สร้างสัญญาณใหม่อัตโนมัติตามตารางที่กำหนด',
+    'settings.languageRestart': 'การเปลี่ยนภาษาจะมีผลทันทีทั้งแอป',
+    'settings.apiProtectedNote': 'คีย์ API จะเก็บไว้ฝั่งเซิร์ฟเวอร์เท่านั้น',
+    'settings.llmProviderAnthropic': 'Anthropic',
+    'settings.llmProviderOpenAI': 'OpenAI',
+    'settings.llmProviderOpenRouter': 'OpenRouter',
+    'settings.marketProviderTwelveData': 'Twelve Data',
+    'settings.marketProviderAlphaVantage': 'Alpha Vantage',
+    'settings.saveSuccess': 'บันทึกการตั้งค่าแล้ว',
+    'settings.saveError': 'ไม่สามารถบันทึกการตั้งค่าได้',
 
-    // Chart
     'chart.price': 'ราคา',
     'chart.volume': 'ปริมาณ',
     'chart.open': 'เปิด',
-    'chart.high': 'สูงสุด',
-    'chart.low': 'ต่ำสุด',
+    'chart.high': 'สูง',
+    'chart.low': 'ต่ำ',
     'chart.close': 'ปิด',
 
-    // Timeframes
     'tf.15m': '15 นาที',
     'tf.1h': '1 ชั่วโมง',
     'tf.4h': '4 ชั่วโมง',
     'tf.1d': '1 วัน',
     'tf.1w': '1 สัปดาห์',
 
-    // Journal
     'journal.title': 'บันทึกเทรด',
     'journal.newEntry': 'รายการใหม่',
     'journal.date': 'วันที่',
@@ -181,13 +221,11 @@ const translations = {
     'journal.exit': 'ราคาออก',
     'journal.pnl': 'กำไร/ขาดทุน',
     'journal.notes': 'หมายเหตุ',
-    'journal.noEntries': 'ยังไม่มีบันทึก',
+    'journal.noEntries': 'ยังไม่มีบันทึกเทรด',
 
-    // News
     'news.title': 'ข่าวตลาด',
     'news.noNews': 'ยังไม่มีข่าว',
 
-    // Common
     'common.loading': 'กำลังโหลด...',
     'common.error': 'เกิดข้อผิดพลาด',
     'common.retry': 'ลองใหม่',

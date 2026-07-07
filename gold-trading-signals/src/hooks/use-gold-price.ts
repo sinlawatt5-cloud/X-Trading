@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import useSWR from 'swr';
 
 interface Candle {
@@ -32,6 +32,15 @@ export function useGoldPrice(refreshInterval = 15 * 60 * 1000) {
 
   const refetch = useCallback(() => {
     return mutate();
+  }, [mutate]);
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      mutate();
+    };
+
+    window.addEventListener('gold-price:refresh', handleRefresh);
+    return () => window.removeEventListener('gold-price:refresh', handleRefresh);
   }, [mutate]);
 
   return {

@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { t } from '@/lib/i18n';
+import { useLocale } from '@/components/locale-provider';
 
 interface SignalGeneratorProps {
   onSignalGenerated: () => void;
@@ -11,6 +13,7 @@ interface SignalGeneratorProps {
 
 export function SignalGenerator({ onSignalGenerated, className = '' }: SignalGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const { locale } = useLocale();
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -29,14 +32,14 @@ export function SignalGenerator({ onSignalGenerated, className = '' }: SignalGen
 
       const signal = await response.json();
 
-      toast.success('Signal Generated!', {
-        description: `${signal.type} signal created for XAUUSD ${signal.timeframe}`,
+      toast.success(t('signal.signalCreated', locale), {
+        description: locale === 'th' ? `สัญญาณ XAUUSD ${signal.timeframe}` : `XAUUSD ${signal.timeframe}`,
       });
 
       onSignalGenerated();
     } catch (error) {
       console.error('Failed to generate signal:', error);
-      toast.error('Generation Failed', {
+      toast.error(t('common.error', locale), {
         description: error instanceof Error ? error.message : 'Failed to generate signal',
       });
     } finally {
@@ -48,7 +51,7 @@ export function SignalGenerator({ onSignalGenerated, className = '' }: SignalGen
     <div className={cn('clay-card p-6', className)}>
       <div className="text-center">
         <div className="mb-4">
-          <div className="mx-auto mb-3 h-16 w-16 rounded-full gold-gradient flex items-center justify-center">
+          <div className="gold-gradient mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full">
             <svg
               className="h-8 w-8 text-white"
               fill="none"
@@ -63,11 +66,11 @@ export function SignalGenerator({ onSignalGenerated, className = '' }: SignalGen
               />
             </svg>
           </div>
-          <h3 className="font-display text-xl font-bold text-cream-dark dark:text-cream mb-2">
-            Generate New Signal
+          <h3 className="font-display mb-2 text-xl font-bold text-cream-dark dark:text-cream">
+            {t('signal.generateNew', locale)}
           </h3>
-          <p className="font-handwritten text-sm text-muted-foreground mb-4">
-            Run AI analysis to generate a new gold trading signal
+          <p className="font-handwritten mb-4 text-sm text-muted-foreground">
+            การวิเคราะห์ด้วย AI เพื่อสร้างสัญญาณเทรดทองคำใหม่
           </p>
         </div>
 
@@ -76,58 +79,39 @@ export function SignalGenerator({ onSignalGenerated, className = '' }: SignalGen
           disabled={isGenerating}
           className={cn(
             'clay-btn px-6 py-3 font-handwritten text-sm font-semibold transition-all',
-            isGenerating
-              ? 'cursor-not-allowed opacity-70'
-              : 'hover:shadow-lg hover:brightness-110 active:scale-95',
+            isGenerating ? 'cursor-not-allowed opacity-70' : 'hover:shadow-lg hover:brightness-110 active:scale-95',
             'text-cream-dark dark:text-cream'
           )}
         >
           {isGenerating ? (
             <span className="flex items-center justify-center gap-2">
-              <svg
-                className="h-4 w-4 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
+              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path
                   className="opacity-75"
                   fill="currentColor"
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              Analyzing...
+              {t('signal.analyzing', locale)}
             </span>
           ) : (
             <span className="flex items-center justify-center gap-2">
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              Generate Signal
+              {t('signal.generateNew', locale)}
             </span>
           )}
         </button>
 
         <div className="mt-4">
           <p className="font-handwritten text-xs text-muted-foreground">
-            Analysis includes SMC, Wyckoff & Multi-Timeframe methods
+            การวิเคราะห์รวม SMC, Wyckoff และ Multi-Timeframe
           </p>
         </div>
       </div>

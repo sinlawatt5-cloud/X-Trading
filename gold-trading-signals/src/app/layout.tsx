@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import { Caveat, Patrick_Hand, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Header } from '@/components/header';
+import { LocaleProvider } from '@/components/locale-provider';
 import { defaultLocale, type Locale } from '@/lib/i18n';
 
 const caveat = Caveat({
@@ -28,12 +31,14 @@ export const metadata: Metadata = {
   description: 'AI-powered gold trading signals with SMC, Wyckoff & Multi-Timeframe analysis',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale: Locale = defaultLocale;
+  const cookieStore = await cookies();
+  const storedLocale = cookieStore.get('locale')?.value;
+  const locale: Locale = storedLocale === 'en' || storedLocale === 'th' ? storedLocale : defaultLocale;
 
   return (
     <html
@@ -46,8 +51,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider defaultTheme="light" storageKey="alpha-gold-theme">
-          <Header locale={locale} />
-          <main className="flex-1">{children}</main>
+          <LocaleProvider initialLocale={locale}>
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Toaster />
+          </LocaleProvider>
         </ThemeProvider>
       </body>
     </html>
